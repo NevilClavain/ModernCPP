@@ -1,0 +1,237 @@
+
+///////// delete
+////////////////////////////////////////////////////////////////////////////////////////////
+
+class IFoo
+{
+public:
+    virtual int do_something() noexcept = 0;
+
+    void hello()
+    {
+
+    }
+
+};
+
+class FooImpl : public IFoo
+{
+public:
+    int do_something() noexcept
+    {
+        return 666;
+    }
+
+
+    void hello() = delete;
+
+};
+
+void main(void)
+{
+    FooImpl f;
+
+    f.do_something();
+
+    f.hello();  // provoque une erreur de compil !
+}
+
+//// std algorithms
+////////////////////////////////////////////////////////////////////////////////////////////
+
+    template<typename T>
+    bool presence_valeur_negative(const std::vector<T>& valeurs) noexcept
+    {
+        const auto premier { 
+            std::find_if(valeurs.begin(),
+                valeurs.end(),
+                [](auto a){return a < 0;}) };
+
+        return premier != valeurs.end();
+    }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    template<typename T>
+	std::ptrdiff_t compterValeurs(const std::vector<T>& valeurs,
+                        T valeurCherchee) noexcept
+    {
+        static_assert(std::is_arithmetic<T>::value, "Type non arithmetique");
+		// égal à la valeur recherchée
+		const auto comp{ std::bind(std::equal_to<T>{}, std::placeholders::_1, valeurCherchee)};
+		// executer l'itérateur
+		const auto nb{ std::count_if(std::begin(valeurs), std::end(valeurs), comp) };
+        return nb;
+    }
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+
+template<typename T>
+int comptage(const std::set<T>& valeurs, T seuil) noexcept
+{
+    int i = 0;
+    std::for_each(valeurs.begin(), valeurs.end(), [&i,seuil](int n) { if (n < seuil) i++; });
+
+    return i;
+}
+
+
+std::set<int> recipient;
+
+recipient = { 6, 7, 8, 9, -5, 12, -6, 1, -4, -8 };
+
+std::cout << comptage(recipient, 0);  // NB : noter que le type de l'arg template est deduit par le compilo
+
+
+//// strings
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+#include <iostream>
+#include <string>
+#include <cctype>
+
+
+struct non_case_sensitive_char_traits : public std::char_traits<char>
+{
+    static char to_upper(char ch) 
+    {
+        return std::toupper((unsigned char)ch);
+    }
+
+    static int compare(const char* s1, const char* s2, size_t n) 
+    {
+        while (n-- != 0) 
+        {
+            if (to_upper(*s1) < to_upper(*s2)) return -1;
+            if (to_upper(*s1) > to_upper(*s2)) return 1;
+            ++s1; ++s2;
+        }
+        return 0;
+    }
+};
+
+using non_case_sensitive_string = std::basic_string<char, non_case_sensitive_char_traits>;
+
+void main(void)
+{
+    non_case_sensitive_string s1 = "Hello";
+    non_case_sensitive_string s2 = "heLLo";
+    if (s1 == s2)
+    {
+        // do something
+    }
+
+}
+
+//c++ move constructor
+//////////////////////////////////////////////////////////////////////////////
+
+
+
+#include <iostream>
+#include <string>
+#include <memory>
+#include <vector>
+
+
+class A
+{
+private:
+    std::string identifiant;
+public:
+    A( const std::string& id) : identifiant(id)
+    {
+        std::cout << "ctor A\n";
+    }
+
+    A(A&& src) // ctor de deplacement
+    {
+        identifiant = src.identifiant;
+        src.identifiant = "";
+    }
+
+    ~A()
+    {
+        std::cout << "dtor A\n";
+    }
+};
+
+
+void main(void)
+{
+    
+    std::vector<A> list;
+    A a("instance1");
+    
+    list.push_back(std::move(a)); // move() provoque l'appel du ctor de deplacement en transformant le '&' en '&&'
+
+    // a.identifiant contient maintenant "" -> le "deplacement" a ete effectue
+
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+
+#include <iostream>
+#include <string>
+#include <memory>
+#include <vector>
+
+
+class A
+{
+private:
+    std::string identifiant;
+public:
+
+
+    A(const std::string& id) : identifiant(id)
+    {
+        std::cout << "ctor A\n";
+    }
+
+    
+    A(A&& src) // ctor de deplacement
+    {
+        identifiant = src.identifiant;
+        src.identifiant = "";
+    }
+    
+
+    ~A()
+    {
+        std::cout << "dtor A\n";
+    }
+};
+
+
+A deplacer()
+{
+    A a{ "instance" };
+    return a;            //provoque l'appel du ctor de deplacement
+}
+
+
+void redeplacer(A&& valeur)
+{
+    A a{ std::move(valeur) }; // provoque l'appel du ctor de deplacement
+}
+
+
+void main(void)
+{
+    /*
+    A a{ deplacer() };
+    redeplacer(a);
+    */
+
+    redeplacer(deplacer());
+
+}
+
