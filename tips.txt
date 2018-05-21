@@ -235,3 +235,146 @@ void main(void)
 
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class A
+{
+private:
+    std::string identifiant;
+public:
+
+    A(const A& src)
+    {
+        identifiant = src.identifiant;
+    }
+
+    A(const std::string& id) : identifiant(id)
+    {
+        std::cout << "ctor A\n";
+    }
+
+    
+    A(A&& src)
+    {
+        identifiant = src.identifiant;
+        src.identifiant = "";
+    }
+    
+
+    A& operator=(const A& src)
+    {
+        identifiant = src.identifiant;
+        return *this;
+    }
+
+    
+    A& operator=(A&& src)
+    {
+        identifiant = src.identifiant;
+        return *this;
+    }
+    
+
+    ~A()
+    {
+        std::cout << "dtor A\n";
+    }
+};
+
+template <class T> 
+void myswap(T& a, T& b)
+{
+    T tmp{ std::move(a) };
+    a = std::move(b);
+    b = std::move(tmp);    
+}
+
+void main(void)
+{
+    A a("AAAA");
+    A b("bbbb");
+
+    myswap(a, b);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+class Foo
+{
+public:
+    std::string member;
+
+    Foo(std::string&& member): member{std::move(member)} {}  // subtilité importante : member est une bien une lvalue puisqu'elle est nommée !! (meme si elle contient une ref rvalue)
+						             // c'est pourquoi il faut la reconvertir en vraie rvalue a l'aide de std::move() :)
+
+Note that the member parameter itself is not an rvalue, it’s an lvalue of type rvalue reference. In order to invoke std::string’s move constructor, 
+not its copy constructor, we use std::move(member) to cast the member parameter back to an rvalue.
+
+};
+
+// Later on...
+
+Foo foo{bar + baz};
+
+
+//recursion with constexpr
+//////////////////////////////////////////////////////////////////////////////
+
+template <size_t N>
+constexpr size_t fact1() { return N*fact1<N - 1>(); }
+
+template <>
+constexpr size_t fact1<0>() { return 1; }
+
+
+// SFINAE
+///////////////////////////////////////////////////////////////////////////////
+
+struct Test  
+{ 
+    typedef int type; 
+}; 
+  
+template < typename T >  
+void f( typename T::type ) {} // definition #1 
+  
+template < typename T >  
+void f( T ) {}                // definition #2 
+  
+f< Test > ( 10 ); //appelle #1  
+f< int > ( 10 );  //appelle #2 sans erreur grace a SFINAE
+
+////////////////////////////////////////////////////////////////////////////////
+
+template <typename T>
+struct has_iterator
+{   
+    template <typename U>
+    static char test(typename U::iterator* x);
+ 
+    template <typename U>
+    static long test(U* x);
+ 
+    static const bool value = sizeof(test<T>(0)) == 1;
+};
+
+cout << has_iterator<int>::value << endl;
+
+//////////////////////////////////////////////////////////////////////////////
+
+template < typename PotentiallyCallable, typename... Args>
+struct is_callable
+{
+	typedef char(&no)[1];
+	typedef char(&yes)[2];
+
+	template < typename T > struct dummy;
+
+	template < typename CheckType>
+	static yes check(dummy<decltype(std::declval<CheckType>()(std::declval<Args>()...))> *);
+	template < typename CheckType>
+	static no check(...);
+
+	enum { value = sizeof(check<PotentiallyCallable>(0)) == sizeof(yes) };
+};
+
