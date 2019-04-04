@@ -378,3 +378,21 @@ struct is_callable
 	enum { value = sizeof(check<PotentiallyCallable>(0)) == sizeof(yes) };
 };
 
+/////////////////////////////////////////////////////////////////////////
+//
+// compare 2 binary files
+
+	std::ifstream f1(p1, std::ifstream::binary);
+	std::ifstream f2(p2, std::ifstream::binary);
+
+	bool equal = std::equal(std::istreambuf_iterator<char>(f1.rdbuf()),
+            			std::istreambuf_iterator<char>(),
+		                std::istreambuf_iterator<char>(f2.rdbuf()));
+
+
+
+
+
+
+
+
